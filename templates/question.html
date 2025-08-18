@@ -11,7 +11,7 @@
         <header class="header">
             <h1>🧠 Mind Mashup</h1>
             <div class="progress-bar">
-                <div class="progress-fill" style="width: {{ (question_num / total_questions) * 100 }}%"></div>
+                <div class="progress-fill" style="width: {{ (question_num / total_questions * 100) | float }}%"></div>
             </div>
             <p class="question-progress">Question {{ question_num }} of {{ total_questions }}</p>
         </header>
@@ -20,29 +20,29 @@
             <div class="question-header">
                 <h2 class="category">{{ question.category }}</h2>
                 <div class="timer-container">
-                    <div id="timer" class="timer">
-                        <span id="timeRemaining">{{ question.time_limit }}</span>s
+                    <div id="timer" class="timer" role="timer" aria-live="polite">
+                        <span id="timeRemaining">{{ question.time_limit }}</span>
                     </div>
-                    <button id="distractionBtn" class="distraction-btn" title="Play distraction sound">🔊</button>
+                    <button id="distractionBtn" class="distraction-btn" title="Play distraction sound" aria-label="Play distraction sound">🔊</button>
                 </div>
             </div>
 
             {% if question.sequence_view_time %}
             <div id="sequenceView" class="sequence-view">
                 <h3>Memorize this sequence ({{ question.sequence_view_time }} seconds):</h3>
-                <div class="sequence">7, 14, 21, 28, 35, 42, 49, 56</div>
+                <div class="sequence" id="sequenceDisplay">7, 14, 21, 28, 35, 42, 49, 56</div>
                 <div class="sequence-timer">
-                    <span id="sequenceTimeRemaining">{{ question.sequence_view_time }}</span>s
+                    <span id="sequenceTimeRemaining">{{ question.sequence_view_time | default(0) }}</span>s
                 </div>
             </div>
             {% endif %}
 
             <div id="questionContent" class="question-content" {% if question.sequence_view_time %}style="display: none;"{% endif %}>
                 <p class="question-text">{{ question.question | safe }}</p>
-                
+
                 <div class="answer-section">
-                    <input type="text" id="answerInput" placeholder="Enter your answer..." maxlength="200">
-                    <button id="submitBtn" class="btn-primary">Submit Answer</button>
+                    <input type="text" id="answerInput" placeholder="Enter your answer..." maxlength="200" aria-label="Answer input">
+                    <button id="submitBtn" class="btn-primary" aria-label="Submit answer">Submit Answer</button>
                 </div>
             </div>
         </div>
@@ -53,7 +53,7 @@
     </div>
 
     <!-- Result Modal -->
-    <div id="resultModal" class="modal">
+    <div id="resultModal" class="modal" role="dialog" aria-labelledby="resultTitle" aria-hidden="true">
         <div class="modal-content">
             <h3 id="resultTitle">Result</h3>
             <p id="resultMessage"></p>
@@ -64,186 +64,23 @@
     </div>
 
     <!-- Time Up Modal -->
-    <div id="timeUpModal" class="modal">
+    <div id="timeUpModal" class="modal" role="dialog" aria-labelledby="timeUpTitle" aria-hidden="true">
         <div class="modal-content">
-            <h3>⏰ Time's Up!</h3>
+            <h3 id="timeUpTitle">⏰ Time's Up!</h3>
             <p>You ran out of time for this question.</p>
             <button id="timeUpNextBtn" class="btn-primary">Continue</button>
         </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='question.js') }}"></script>
     <script>
-        const questionData = {{ question | tojsonfilter | safe }};
-        const questionId = {{ question.id }};
-        let timeRemaining = {{ question.time_limit }};
-        let timerInterval;
-        let sequenceTimerInterval;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle sequence viewing for sequence recall questions
-            {% if question.sequence_view_time %}
-            startSequenceTimer();
-            {% else %}
-            startMainTimer();
-            {% endif %}
-
-            // Set up event listeners
-            document.getElementById('submitBtn').addEventListener('click', submitAnswer);
-            document.getElementById('answerInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    submitAnswer();
-                }
-            });
-            document.getElementById('distractionBtn').addEventListener('click', playDistraction);
-            document.getElementById('nextBtn').addEventListener('click', goToNext);
-            document.getElementById('timeUpNextBtn').addEventListener('click', goToNext);
-
-            // Focus on answer input
-            {% if not question.sequence_view_time %}
-            document.getElementById('answerInput').focus();
-            {% endif %}
-        });
-
-        function startSequenceTimer() {
-            let sequenceTime = {{ question.sequence_view_time or 0 }};
-            document.getElementById('sequenceTimeRemaining').textContent = sequenceTime;
-
-            sequenceTimerInterval = setInterval(function() {
-                sequenceTime--;
-                document.getElementById('sequenceTimeRemaining').textContent = sequenceTime;
-
-                if (sequenceTime <= 0) {
-                    clearInterval(sequenceTimerInterval);
-                    document.getElementById('sequenceView').style.display = 'none';
-                    document.getElementById('questionContent').style.display = 'block';
-                    document.getElementById('answerInput').focus();
-                    startMainTimer();
-                }
-            }, 1000);
-        }
-
-        function startMainTimer() {
-            updateTimerDisplay();
-            
-            timerInterval = setInterval(function() {
-                timeRemaining--;
-                updateTimerDisplay();
-
-                if (timeRemaining <= 0) {
-                    clearInterval(timerInterval);
-                    timeUp();
-                }
-            }, 1000);
-        }
-
-        function updateTimerDisplay() {
-            const minutes = Math.floor(timeRemaining / 60);
-            const seconds = timeRemaining % 60;
-            const display = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}`;
-            document.getElementById('timeRemaining').textContent = display;
-            
-            // Add warning class when time is low
-            const timer = document.getElementById('timer');
-            if (timeRemaining <= 30) {
-                timer.classList.add('timer-warning');
-            }
-            if (timeRemaining <= 10) {
-                timer.classList.add('timer-danger');
-            }
-        }
-
-        function submitAnswer() {
-            const answer = document.getElementById('answerInput').value.trim();
-            if (!answer) {
-                alert('Please enter an answer');
-                return;
-            }
-
-            // Disable submit button and input
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('answerInput').disabled = true;
-            clearInterval(timerInterval);
-
-            fetch('/submit_answer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    answer: answer,
-                    question_id: questionId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                showResult(data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to submit answer. Please try again.');
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('answerInput').disabled = false;
-            });
-        }
-
-        function showResult(data) {
-            const modal = document.getElementById('resultModal');
-            const title = document.getElementById('resultTitle');
-            const message = document.getElementById('resultMessage');
-            const explanation = document.getElementById('explanation');
-            const scoreInfo = document.getElementById('scoreInfo');
-
-            if (data.correct) {
-                title.textContent = '🎉 Correct!';
-                title.className = 'result-correct';
-                message.textContent = 'Well done! You got it right.';
-            } else {
-                title.textContent = '❌ Incorrect';
-                title.className = 'result-incorrect';
-                message.textContent = `The correct answer was: ${data.correct_answer}`;
-            }
-
-            if (data.explanation) {
-                explanation.innerHTML = `<strong>Explanation:</strong> ${data.explanation}`;
-                explanation.style.display = 'block';
-            } else {
-                explanation.style.display = 'none';
-            }
-
-            scoreInfo.textContent = `Points earned: ${data.points}`;
-
-            modal.style.display = 'flex';
-        }
-
-        function timeUp() {
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('answerInput').disabled = true;
-            document.getElementById('timeUpModal').style.display = 'flex';
-        }
-
-        function goToNext() {
-            window.location.href = '/question';
-        }
-
-        function playDistraction() {
-            // Play a beep sound or distraction
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.5);
-        }
+        // Initialize question data from server
+        initializeQuestionData(
+            {{ question | tojson | safe }},
+            {{ question.id }},
+            {{ question.time_limit }}
+        );
     </script>
 </body>
 </html>
