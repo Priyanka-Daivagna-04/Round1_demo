@@ -21,8 +21,11 @@ document.addEventListener('DOMContentLoaded', function() {
             submitAnswer();
         }
     });
-    document.getElementById('distractionBtn').addEventListener('click', playDistraction);
-    document.getElementById('nextBtn').addEventListener('click', goToNext);
+   
+    // Disable next button initially
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.disabled = true;
+    nextBtn.addEventListener('click', goToNext);
     document.getElementById('timeUpNextBtn').addEventListener('click', goToNext);
 
     // Focus on answer input if not sequence question
@@ -95,8 +98,8 @@ function startMainTimer() {
 
 function updateTimerDisplay() {
     const minutes = Math.floor(timeRemaining / 60);
-    const seconds = timeRemaining % 60;
-    const display = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}`;
+    const seconds = Math.floor(timeRemaining % 60);
+    const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     document.getElementById('timeRemaining').textContent = display;
     
     // Add warning class when time is low
@@ -173,6 +176,12 @@ function showResult(data) {
 
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
+    // Enable and focus next button after answer is submitted and result shown
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.focus();
+    }
 }
 
 function timeUp() {
@@ -190,7 +199,7 @@ function goToNext() {
 function playDistraction() {
     try {
         // Play a beep sound or distraction
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // ...audio context creation removed...
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         

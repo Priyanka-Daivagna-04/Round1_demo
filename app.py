@@ -220,12 +220,25 @@ def get_question_time():
 def scoreboard():
     conn = sqlite3.connect('competition.db')
     c = conn.cursor()
-    c.execute('''SELECT name, total_score, completed 
-                 FROM participants 
-                 ORDER BY total_score DESC, start_time ASC''')
-    participants = c.fetchall()
+    c.execute('''SELECT id, name, total_score, completed, start_time FROM participants ORDER BY total_score DESC, start_time ASC''')
+    rows = c.fetchall()
+    participants = []
+    for row in rows:
+        pid, name, total_score, completed, start_time = row
+        # Get last answer submission time for this participant
+        c.execute('SELECT MAX(submission_time) FROM answers WHERE participant_id = ?', (pid,))
+        last_submission = c.fetchone()[0]
+        if last_submission and start_time:
+            time_taken = last_submission - start_time
+        else:
+            time_taken = None
+        participants.append({
+            'name': name,
+            'total_score': total_score,
+            'completed': completed,
+            'time_taken': time_taken
+        })
     conn.close()
-    
     return render_template('scoreboard.html', participants=participants)
 
 @app.route('/api/scoreboard')

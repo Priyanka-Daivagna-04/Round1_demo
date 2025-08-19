@@ -1,58 +1,11 @@
 // Global utility functions for the Mind Mashup competition
 
-// Audio context for sound effects
-let audioContext;
-
-// Initialize audio context on first user interaction
-function initAudio() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-}
-
-// Play a beep sound for distraction
-function playBeep(frequency = 800, duration = 500, volume = 0.3) {
-    initAudio();
-    
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = frequency;
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
-    
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + duration / 1000);
-}
-
-// Play multiple beeps for more distraction
-function playDistractionSound() {
-    const sounds = [
-        { freq: 800, delay: 0 },
-        { freq: 600, delay: 200 },
-        { freq: 1000, delay: 400 },
-        { freq: 400, delay: 600 }
-    ];
-    
-    sounds.forEach(sound => {
-        setTimeout(() => playBeep(sound.freq, 300, 0.2), sound.delay);
-    });
-}
 
 // Format time for display
 function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    
-    if (minutes > 0) {
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-    return remainingSeconds.toString();
+    // Show only whole seconds (no decimals)
+    if (typeof seconds !== 'number') seconds = Number(seconds);
+    return Math.floor(seconds).toString();
 }
 
 // Show/hide loading state
@@ -248,7 +201,7 @@ window.addEventListener('beforeunload', function(e) {
 });
 
 // Initialize audio on first click
-document.addEventListener('click', initAudio, { once: true });
+// ...removed reference to initAudio...
 
 // Export for use in other scripts
 window.MindMashup = {
